@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    // AI blog generation providers. Keys live in the environment (secrets),
+    // while the active provider / cadence are chosen by the admin in Settings.
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-5.4-mini'),
+    ],
+
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-3.5-flash'),
+    ],
+
 ];

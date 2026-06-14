@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Models;
+
+use Database\Factories\SubscriberFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Subscriber extends Model
+{
+    /** @use HasFactory<SubscriberFactory> */
+    use HasFactory;
+
+    protected $fillable = [
+        'email',
+        'source',
+        'confirmed_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'confirmed_at' => 'datetime',
+        ];
+    }
+}

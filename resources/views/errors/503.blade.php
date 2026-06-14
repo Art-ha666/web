@@ -1,0 +1,6 @@
+@extends('errors.layout')
+@section('title', 'Be right back')
+@section('eyebrow', 'Maintenance')
+@section('code', '503')
+@section('heading', 'We are rolling out an update.')
+@section('message', 'The site is briefly down for maintenance. We will be back shortly - thanks for your patience.')

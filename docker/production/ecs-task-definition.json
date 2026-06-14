@@ -1,0 +1,55 @@
+{
+  "family": "akh-solutions",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/akh-ecs-execution-role",
+  "taskRoleArn": "arn:aws:iam::<AWS_ACCOUNT_ID>:role/akh-ecs-task-role",
+  "runtimePlatform": { "cpuArchitecture": "X86_64", "operatingSystemFamily": "LINUX" },
+  "containerDefinitions": [
+    {
+      "name": "app",
+      "image": "<IMAGE>",
+      "essential": true,
+      "portMappings": [{ "containerPort": 8080, "protocol": "tcp" }],
+      "environment": [
+        { "name": "APP_ENV", "value": "production" },
+        { "name": "APP_DEBUG", "value": "false" },
+        { "name": "APP_URL", "value": "https://akhsolutions.com" },
+        { "name": "LOG_CHANNEL", "value": "stderr" },
+        { "name": "SESSION_DRIVER", "value": "redis" },
+        { "name": "CACHE_STORE", "value": "redis" },
+        { "name": "QUEUE_CONNECTION", "value": "redis" },
+        { "name": "DB_CONNECTION", "value": "mysql" },
+        { "name": "RUN_MIGRATIONS", "value": "false" }
+      ],
+      "secrets": [
+        { "name": "APP_KEY", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:akh/app-key" },
+        { "name": "DB_HOST", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:akh/db-host" },
+        { "name": "DB_DATABASE", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:akh/db-database" },
+        { "name": "DB_USERNAME", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:akh/db-username" },
+        { "name": "DB_PASSWORD", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:akh/db-password" },
+        { "name": "REDIS_HOST", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:akh/redis-host" },
+        { "name": "MAIL_HOST", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:akh/mail-host" },
+        { "name": "MAIL_USERNAME", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:akh/mail-username" },
+        { "name": "MAIL_PASSWORD", "valueFrom": "arn:aws:secretsmanager:<AWS_REGION>:<AWS_ACCOUNT_ID>:secret:akh/mail-password" }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -fsS http://localhost:8080/up || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/akh-solutions",
+          "awslogs-region": "<AWS_REGION>",
+          "awslogs-stream-prefix": "app"
+        }
+      }
+    }
+  ]
+}

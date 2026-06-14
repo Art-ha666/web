@@ -2,10 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'Welcome')->name('home');
+// Public marketing site (home, services, work, etc.)
+require __DIR__.'/site.php';
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')->name('dashboard');
+// Admin CMS dashboard + resource management.
+require __DIR__.'/admin.php';
+
+// Fortify post-login redirect target -> admin dashboard.
+Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::redirect('/dashboard', '/admin')->name('dashboard');
 });
 
 require __DIR__.'/settings.php';

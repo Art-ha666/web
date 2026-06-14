@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\ThemeService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,6 +41,12 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'theme' => fn () => app(ThemeService::class)->meta(),
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'message' => fn () => $request->session()->get('message'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

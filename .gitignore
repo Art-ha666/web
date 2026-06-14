@@ -27,3 +27,9 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Local AI/dev tooling - never pushed
+/.claude
+/CLAUDE.md
+/.mcp.json
+/boost.json

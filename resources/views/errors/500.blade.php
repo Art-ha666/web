@@ -1,0 +1,6 @@
+@extends('errors.layout')
+@section('title', 'Server error')
+@section('eyebrow', 'Server error')
+@section('code', '500')
+@section('heading', 'Our engineers are on it.')
+@section('message', 'Something broke on our side. Give it a moment and try again - if it keeps happening, let us know.')

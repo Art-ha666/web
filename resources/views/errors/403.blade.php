@@ -1,0 +1,6 @@
+@extends('errors.layout')
+@section('title', 'Forbidden')
+@section('eyebrow', 'Access denied')
+@section('code', '403')
+@section('heading', 'You do not have access to this.')
+@section('message', 'This page is restricted. If you think this is a mistake, get in touch and we will sort it out.')

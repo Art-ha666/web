@@ -16,12 +16,13 @@ class DashboardTest extends TestCase
         $response->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_users_can_visit_the_dashboard()
+    public function test_authenticated_users_are_sent_to_the_admin_dashboard()
     {
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        $response = $this->get(route('dashboard'));
-        $response->assertOk();
+        // The legacy /dashboard route now forwards to the AKH admin CMS.
+        $this->get(route('dashboard'))->assertRedirect('/admin');
+        $this->get('/admin')->assertOk();
     }
 }

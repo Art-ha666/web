@@ -1,0 +1,6 @@
+@extends('errors.layout')
+@section('title', 'Page expired')
+@section('eyebrow', 'Session expired')
+@section('code', '419')
+@section('heading', 'Your session timed out.')
+@section('message', 'For your security the page expired. Refresh and try again - you will pick up right where you left off.')

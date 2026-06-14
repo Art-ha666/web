@@ -170,3 +170,292 @@
         @apply bg-background text-foreground;
     }
 }
+
+/*
+|--------------------------------------------------------------------------
+| AKH Solutions - Public design system
+|--------------------------------------------------------------------------
+| Maps the runtime --ak-* theme custom properties (injected per active
+| design by ThemeService) onto Tailwind utilities, then layers reusable
+| component classes + motion. Switching the active design re-skins the
+| entire public site instantly. Fallbacks match the Aurora default.
+*/
+@theme {
+    --color-ak-bg: var(--ak-bg, #07080d);
+    --color-ak-bg-2: var(--ak-bg-2, #0b0d14);
+    --color-ak-surface: var(--ak-surface, #10131c);
+    --color-ak-surface-2: var(--ak-surface-2, #161a26);
+    --color-ak-glass: var(--ak-glass, rgba(22, 26, 38, 0.55));
+    --color-ak-glass-border: var(--ak-glass-border, rgba(255, 255, 255, 0.08));
+    --color-ak-hairline: var(--ak-hairline, rgba(255, 255, 255, 0.07));
+    --color-ak-text: var(--ak-text, #f3f5fb);
+    --color-ak-text-2: var(--ak-text-2, #aab2c5);
+    --color-ak-text-3: var(--ak-text-3, #727a8e);
+    --color-ak-primary: var(--ak-primary, #5778f8);
+    --color-ak-primary-hover: var(--ak-primary-hover, #6f8bff);
+    --color-ak-on-primary: var(--ak-on-primary, #ffffff);
+    --color-ak-grad-1: var(--ak-grad-1, #28baf3);
+    --color-ak-grad-2: var(--ak-grad-2, #5778f8);
+    --color-ak-grad-3: var(--ak-grad-3, #7e2cfd);
+    --color-ak-ring: var(--ak-ring, rgba(87, 120, 248, 0.55));
+    --color-ak-glow: var(--ak-glow, rgba(87, 120, 248, 0.35));
+
+    --font-display: var(--ak-font-display, 'Space Grotesk'), ui-sans-serif, system-ui, sans-serif;
+    --font-body: var(--ak-font-body, 'Inter'), ui-sans-serif, system-ui, sans-serif;
+    --font-mono: var(--ak-font-mono, 'JetBrains Mono'), ui-monospace, monospace;
+}
+
+@layer components {
+    .ak-container {
+        @apply mx-auto w-full max-w-7xl px-6 sm:px-8;
+    }
+
+    .ak-eyebrow {
+        font-family: var(--font-mono);
+        @apply text-xs font-semibold uppercase tracking-[0.18em] text-ak-grad-1;
+    }
+
+    .ak-gradient-text {
+        background-image: linear-gradient(120deg, var(--ak-grad-1), var(--ak-grad-2) 45%, var(--ak-grad-3));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .ak-gradient-bg {
+        background-image: linear-gradient(135deg, var(--ak-grad-1) 0%, var(--ak-grad-2) 50%, var(--ak-grad-3) 100%);
+    }
+
+    .ak-glass {
+        background: var(--ak-glass);
+        border: 1px solid var(--ak-glass-border);
+        backdrop-filter: blur(14px) saturate(140%);
+        -webkit-backdrop-filter: blur(14px) saturate(140%);
+        border-radius: var(--ak-radius, 16px);
+    }
+
+    .ak-card {
+        background: var(--ak-surface);
+        border: 1px solid var(--ak-hairline);
+        border-radius: var(--ak-radius, 16px);
+        transition:
+            transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+            border-color 0.25s ease,
+            box-shadow 0.25s ease;
+    }
+
+    .ak-card-hover:hover {
+        transform: translateY(-4px);
+        border-color: var(--ak-primary);
+        box-shadow: 0 24px 60px -24px var(--ak-glow);
+    }
+
+    .ak-btn {
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-semibold transition;
+        border-radius: calc(var(--ak-radius, 16px) - 4px);
+        padding: 0.72rem 1.35rem;
+        font-family: var(--font-body);
+    }
+
+    .ak-btn-primary {
+        background: var(--ak-primary);
+        color: var(--ak-on-primary);
+    }
+
+    .ak-btn-primary:hover {
+        background: var(--ak-primary-hover);
+        box-shadow: 0 0 0 4px var(--ak-glow);
+        transform: translateY(-1px);
+    }
+
+    .ak-btn-gradient {
+        background-image: linear-gradient(120deg, var(--ak-grad-1), var(--ak-grad-2) 50%, var(--ak-grad-3));
+        color: #fff;
+    }
+
+    .ak-btn-gradient:hover {
+        box-shadow: 0 0 0 4px var(--ak-glow);
+        transform: translateY(-1px);
+    }
+
+    .ak-btn-ghost {
+        border: 1px solid var(--ak-glass-border);
+        color: var(--ak-text);
+        background: transparent;
+    }
+
+    .ak-btn-ghost:hover {
+        border-color: var(--ak-primary);
+        background: var(--ak-glass);
+    }
+
+    .ak-chip {
+        @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium;
+        border: 1px solid var(--ak-glass-border);
+        color: var(--ak-text-2);
+        font-family: var(--font-mono);
+    }
+
+    .ak-grid-texture {
+        background-image:
+            linear-gradient(var(--ak-hairline) 1px, transparent 1px),
+            linear-gradient(90deg, var(--ak-hairline) 1px, transparent 1px);
+        background-size: 44px 44px;
+    }
+
+    .ak-focusable:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px var(--ak-ring);
+    }
+
+    .ak-prose {
+        color: var(--ak-text-2);
+        line-height: 1.7;
+    }
+    .ak-prose > * + * {
+        margin-top: 1.15em;
+    }
+    .ak-prose h2 {
+        font-family: var(--font-display);
+        color: var(--ak-text);
+        font-size: 1.6rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin-top: 1.8em;
+    }
+    .ak-prose h3 {
+        font-family: var(--font-display);
+        color: var(--ak-text);
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-top: 1.6em;
+    }
+    .ak-prose p {
+        color: var(--ak-text-2);
+    }
+    .ak-prose strong {
+        color: var(--ak-text);
+        font-weight: 600;
+    }
+    .ak-prose a {
+        color: var(--ak-primary);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+    .ak-prose ul {
+        list-style: none;
+        padding-left: 0;
+    }
+    .ak-prose ul li {
+        position: relative;
+        padding-left: 1.5rem;
+    }
+    .ak-prose ul li::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0.6em;
+        height: 0.4rem;
+        width: 0.4rem;
+        border-radius: 9999px;
+        background-image: linear-gradient(120deg, var(--ak-grad-1), var(--ak-grad-3));
+    }
+    .ak-prose ul li + li {
+        margin-top: 0.6rem;
+    }
+}
+
+@layer utilities {
+    .ak-fade-up {
+        opacity: 0;
+        animation: ak-fade-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .ak-float {
+        animation: ak-float 7s ease-in-out infinite;
+    }
+
+    .ak-pulse-dot {
+        animation: ak-pulse-dot 2s ease-in-out infinite;
+    }
+
+    .ak-marquee {
+        animation: ak-marquee 38s linear infinite;
+    }
+
+    .ak-gradient-pan {
+        background-size: 200% 200%;
+        animation: ak-gradient-pan 14s ease infinite;
+    }
+
+    .ak-mask-fade-x {
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+        mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    }
+}
+
+@keyframes ak-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(24px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes ak-float {
+    0%,
+    100% {
+        transform: translateY(0) translateX(0);
+    }
+    50% {
+        transform: translateY(-12px) translateX(6px);
+    }
+}
+
+@keyframes ak-pulse-dot {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.4;
+        transform: scale(0.82);
+    }
+}
+
+@keyframes ak-marquee {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes ak-gradient-pan {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ak-fade-up,
+    .ak-float,
+    .ak-pulse-dot,
+    .ak-marquee,
+    .ak-gradient-pan {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+}

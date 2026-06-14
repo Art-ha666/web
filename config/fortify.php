@@ -161,7 +161,9 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Public registration is intentionally disabled - this is a single-tenant
+        // admin CMS. Accounts are provisioned manually (seeder / artisan), not self-signup.
+        // Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([
