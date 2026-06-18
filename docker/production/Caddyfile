@@ -1,0 +1,41 @@
+# Caddyfile — public TLS edge for AKH Solutions.
+#
+# TLS: Cloudflare proxied (orange cloud), SSL/TLS mode = "Full". Cloudflare
+# terminates the public cert at the edge and re-encrypts to this origin. Caddy
+# serves an instantly-generated self-signed cert ("tls internal") on :443 — no
+# ACME, no dependency on DNS already pointing here — so the origin can be fully
+# verified BEFORE the DNS cutover (zero downtime). Caddy auto-redirects http->https.
+#
+# HARDENING (recommended later): switch Cloudflare to "Full (strict)" and replace
+# the `tls internal` line with a Cloudflare Origin Certificate:
+#   tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
+# (generate it at SSL/TLS -> Origin Server -> Create Certificate, mount ./certs).
+
+akh.dav88.dev {
+	tls internal
+
+	encode zstd gzip
+
+	# Forward everything to the app container's bundled nginx (php-fpm behind it).
+	reverse_proxy app:8080 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-For {remote_host}
+		header_up Host {host}
+	}
+
+	# Security headers (HSTS only makes sense once you're committed to HTTPS).
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Trust Cloudflare's forwarded client IP (Full-strict). Tighten to CF ranges in prod.
+	# trusted_proxies static 173.245.48.0/20 103.21.244.0/22 ... (full CF list)
+
+	log {
+		output stdout
+		format console
+	}
+}

@@ -1,0 +1,249 @@
+name: Deploy to Vultr
+
+# Continuous deployment for AKH Solutions to a single Vultr VPS.
+#
+# Strategy: build the production Docker image AND the Vite/Wayfinder frontend
+# assets in GitHub Actions, push the image to GHCR, then SSH to the VPS and have
+# it pull + restart via docker compose. The VPS only runs Docker (no PHP/Node/
+# Composer toolchain, no build load on the small box).
+#
+# Triggered only AFTER the "CI" workflow succeeds on main (workflow_run), plus a
+# manual dispatch for re-deploys / rollbacks.
+#
+# One-time VPS setup expected (done outside this workflow):
+#   - Docker + compose plugin installed; a "deploy" user in the docker group.
+#   - The production compose file (docker-compose.prod.yml) + a populated .env live in
+#     ${{ vars.VPS_APP_DIR }} (e.g. /opt/akh) on the server.
+#   - MySQL 8 + Redis reachable from the app container; a Cloudflare-facing
+#     reverse proxy/TLS fronts the app (app listens on :8080).
+#
+# Required GitHub config (Settings -> Secrets and variables -> Actions):
+#   Secrets:   VPS_SSH_KEY        (private ed25519 key for the deploy user)
+#              GHCR_PAT_READ      (ONLY if the GHCR package is private; read:packages)
+#   Variables: VPS_HOST           (VPS IP / hostname)
+#              VPS_USER           (e.g. deploy)
+#              VPS_SSH_PORT       (e.g. 22)
+#              VPS_APP_DIR        (e.g. /opt/akh)
+#              HEALTHCHECK_URL    (e.g. https://akh.dav88.dev/up)
+#   Auto:      GITHUB_TOKEN       (packages:write, to push to GHCR)
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_sha:
+        description: "Commit SHA / image tag to deploy (blank = current). Use a previous SHA to roll back."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  packages: write   # push image to GHCR
+
+concurrency:
+  group: deploy-vultr
+  cancel-in-progress: false   # never let two deploys overlap
+
+env:
+  REGISTRY: ghcr.io
+  # GHCR image names MUST be lowercase; github.repository is "Art-ha666/web".
+  IMAGE_NAME: art-ha666/web
+
+jobs:
+  build-and-deploy:
+    name: Build, push & deploy
+    runs-on: ubuntu-latest
+    environment: production
+    # Only run when triggered manually, OR when the CI run that triggered us
+    # actually succeeded on the main branch. This prevents deploying a red CI
+    # or a green CI from a feature branch.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+
+    steps:
+      # Resolve which commit/image this deploy targets.
+      #   - workflow_run: the SHA that passed CI.
+      #   - workflow_dispatch: the chosen SHA, or the default branch HEAD.
+      - name: Resolve target SHA
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.inputs.image_sha }}" ]; then
+            echo "sha=${{ github.event.inputs.image_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.sha }}
+
+      # --- Build the production frontend assets here (NOT on the VPS) ---
+      # PHP is needed so Wayfinder can generate typed routes during the Vite build.
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, intl, bcmath, zip, gd
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Build frontend (public/build)
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress --no-scripts
+          npm ci
+          npm run build
+
+      # --- Build & push the image to GHCR ---
+      # public/build now exists in the context and is copied into the image by
+      # docker/production/Dockerfile.
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/production/Dockerfile
+          push: true
+          # Immutable :sha tag for rollback + moving :latest for convenience.
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.target.outputs.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # --- Deploy on the VPS over SSH ---
+      # The remote script logs in to GHCR, pulls the exact :sha image, runs
+      # migrations as a ONE-OFF container (irreversible — see workflow header),
+      # then swaps the long-running app via `compose up -d`, and finally
+      # prunes old images. Compose file + .env already live in VPS_APP_DIR.
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.VPS_HOST }}
+          username: ${{ vars.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ vars.VPS_SSH_PORT }}
+          command_timeout: 15m
+          script_stop: true   # abort on first failing command
+          envs: IMAGE_REF,GHCR_USER,GHCR_TOKEN
+          script: |
+            set -euo pipefail
+            cd "${{ vars.VPS_APP_DIR }}"
+
+            # GHCR login only if a token is provided (package is private). If the
+            # package is public, GHCR_TOKEN is empty and the pull works anonymously.
+            if [ -n "${GHCR_TOKEN:-}" ]; then
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            fi
+
+            # Pin the exact image this deploy should run.
+            export APP_IMAGE="$IMAGE_REF"
+            echo "Deploying image: $APP_IMAGE"
+
+            # Pull the new image first so the swap is fast (less downtime).
+            docker compose -f docker-compose.prod.yml pull app
+
+            # OPTIONAL pre-migrate backup (uncomment once DB creds are available
+            # to the box). Protects against irreversible/destructive migrations.
+            # docker compose -f docker-compose.prod.yml exec -T mysql \
+            #   sh -c 'mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+            #   > "backup-$(date +%F-%H%M%S).sql"
+
+            # Run migrations as a one-off container BEFORE swapping the app.
+            # Uses the new image. --force is required outside local env.
+            # NOTE: this is the one IRREVERSIBLE step in the pipeline.
+            docker compose -f docker-compose.prod.yml run --rm --no-deps \
+              app php artisan migrate --force
+
+            # Swap the long-running services to the new image (app + queue).
+            # The entrypoint re-caches config/routes/views on boot.
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            # Trim old images to keep the small disk clean.
+            docker image prune -f
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.target.outputs.sha }}
+          GHCR_USER: ${{ github.actor }}
+          # The job's GITHUB_TOKEN can read the repo's own GHCR package (works even
+          # while the package is private), so the VPS authenticates with it — no
+          # separate PAT needed. Make the package public later to drop this entirely.
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- Post-deploy health check against the live, Cloudflare-fronted URL ---
+      - name: Health check
+        id: health
+        run: |
+          URL="${{ vars.HEALTHCHECK_URL }}"
+          URL="${URL:-https://akh.dav88.dev/up}"
+          echo "Probing $URL"
+          for i in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$URL" || echo 000)
+            echo "attempt $i -> HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "healthy=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "healthy=false" >> "$GITHUB_OUTPUT"
+          echo "::error::Health check failed: $URL never returned 200"
+          exit 1
+
+      # --- Rollback if the new version is unhealthy ---
+      # Re-point the app to the PREVIOUS immutable :sha image (recorded on the
+      # VPS by the last successful deploy) and restart.
+      - name: Rollback on failed health check
+        if: failure() && steps.health.outcome == 'failure'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.VPS_HOST }}
+          username: ${{ vars.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ vars.VPS_SSH_PORT }}
+          command_timeout: 10m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd "${{ vars.VPS_APP_DIR }}"
+            if [ -f .last_good_image ]; then
+              export APP_IMAGE="$(cat .last_good_image)"
+              echo "Rolling back to $APP_IMAGE"
+              docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            else
+              echo "::warning::No .last_good_image marker found; manual rollback required"
+              exit 1
+            fi
+
+      # On success, record the now-known-good image so the next failed deploy
+      # can roll back to it automatically.
+      - name: Record last-good image
+        if: success()
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.VPS_HOST }}
+          username: ${{ vars.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ vars.VPS_SSH_PORT }}
+          script: |
+            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.target.outputs.sha }}" \
+              > "${{ vars.VPS_APP_DIR }}/.last_good_image"

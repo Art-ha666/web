@@ -1,0 +1,148 @@
+# docker-compose.prod.yml — AKH Solutions single-VPS production stack (Vultr).
+#
+# One small VPS runs four containers on a private bridge network:
+#   caddy  → public TLS reverse proxy (:80/:443), only service exposed to the internet
+#   app    → the CI-built image (nginx + php-fpm + supervisor + queue worker), listens :8080
+#   mysql  → MySQL 8.4, data on a named volume, NOT published to the host
+#   redis  → cache / session / queue backend, password-protected, NOT published
+#
+# Deploy flow (run from CI over SSH, or manually on the box):
+#   1. docker login <registry>            # GHCR / Docker Hub
+#   2. docker compose -f docker-compose.prod.yml pull
+#   3. docker compose -f docker-compose.prod.yml up -d
+#   4. docker compose -f docker-compose.prod.yml run --rm app php artisan migrate --force
+#
+# Heavy `npm run build` / `composer install` happen in CI and are baked into ${APP_IMAGE}.
+# The VPS never compiles assets. Secrets come from a sibling `.env` file (chmod 600).
+
+name: akh
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # To harden to Full (strict): mount a Cloudflare Origin Cert here and point
+      # the Caddyfile `tls` directive at it: - ./certs:/etc/caddy/certs:ro
+      - caddy-data:/data    # Caddy's internal CA + self-signed cert persist here
+      - caddy-config:/config
+    networks:
+      - edge
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      # Verify Caddy is up and its app upstream is reachable (avoids the http->https
+      # redirect + host-match quirks of probing the public vhost from inside).
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://app:8080/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  app:
+    image: ${APP_IMAGE:?set APP_IMAGE to the CI-pushed tag, e.g. ghcr.io/art-ha666/web:sha-xxxx}
+    restart: unless-stopped
+    env_file:
+      - .env                  # APP_KEY, DB_*, REDIS_*, MAIL_* — never commit this file
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      RUN_MIGRATIONS: "false"   # migrations run as an explicit one-off step, not on boot
+    expose:
+      - "8080"                  # internal only; reached via caddy on the edge network
+    volumes:
+      - app-storage:/var/www/html/storage/app   # user uploads / media survive deploys
+    networks:
+      - edge
+      - backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    command:
+      # Trim MySQL's resident footprint to fit a small box (~saves 300-400MB vs defaults).
+      - --innodb-buffer-pool-size=256M
+      - --innodb-redo-log-capacity=64M
+      - --performance-schema=OFF
+      - --max-connections=50
+      - --skip-mysqlx     # we don't use the X protocol; closes :33060
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"   # no fixed root password lying around
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "${DB_USERNAME}", "-p${DB_PASSWORD}"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - allkeys-lru        # safe for cache; queue/session keys are short-lived
+      - --save
+      - ""                 # no RDB snapshots — cache/session/queue are ephemeral
+      - --appendonly
+      - "no"
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  edge:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true          # mysql/redis have NO route to the internet
+
+volumes:
+  caddy-data:
+  caddy-config:
+  mysql-data:
+  redis-data:
+  app-storage:
