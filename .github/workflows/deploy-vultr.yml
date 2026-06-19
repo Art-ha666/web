@@ -24,7 +24,7 @@ name: Deploy to Vultr
 #              VPS_USER           (e.g. deploy)
 #              VPS_SSH_PORT       (e.g. 22)
 #              VPS_APP_DIR        (e.g. /opt/akh)
-#              HEALTHCHECK_URL    (e.g. https://akh.dav88.dev/up)
+#              HEALTHCHECK_URL    (e.g. https://akhsolutions.net/up)
 #   Auto:      GITHUB_TOKEN       (packages:write, to push to GHCR)
 
 on:
@@ -193,7 +193,7 @@ jobs:
         id: health
         run: |
           URL="${{ vars.HEALTHCHECK_URL }}"
-          URL="${URL:-https://akh.dav88.dev/up}"
+          URL="${URL:-https://akhsolutions.net/up}"
           echo "Probing $URL"
           for i in $(seq 1 12); do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$URL" || echo 000)

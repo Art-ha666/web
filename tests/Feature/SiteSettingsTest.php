@@ -12,7 +12,7 @@ it('saves the analytics, cookie banner, and newsletter settings', function () {
             'nav_cta_label' => 'Book a discovery call',
             'nav_cta_url' => '/contact',
             'ga_measurement_id' => 'G-ABC1234XYZ',
-            'head_scripts' => '<script defer data-domain="akh.dav88.dev" src="https://plausible.io/js/script.js"></script>',
+            'head_scripts' => '<script defer data-domain="akhsolutions.net" src="https://plausible.io/js/script.js"></script>',
             'newsletter_heading' => 'Field notes',
             'newsletter_success' => 'Subscribed - talk soon.',
             'cookie_banner_text' => 'We use a few cookies.',

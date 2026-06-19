@@ -112,7 +112,7 @@ Can also be run manually: **Actions → Deploy to Vultr → Run workflow** (opti
 | Variable | `VPS_USER` | `deploy` |
 | Variable | `VPS_SSH_PORT` | `22` |
 | Variable | `VPS_APP_DIR` | `/opt/akh` |
-| Variable | `HEALTHCHECK_URL` | `https://akh.dav88.dev/up` (update to the new domain) |
+| Variable | `HEALTHCHECK_URL` | `https://akhsolutions.net/up` (update to the new domain) |
 
 The VPS pulls the (private) GHCR image using the job's `GITHUB_TOKEN` — no extra PAT needed.
 
@@ -197,7 +197,7 @@ bash backup-db.sh manual   # take a backup right now
 ## 10. ⏳ PENDING: go live (DNS cutover)
 
 The app is fully built, deployed, and verified on the VPS (every page returns 200 over the origin IP).
-It is **not yet public** because no domain points at it. The previous `akh.dav88.dev` lived on a *different*
+It is **not yet public** because no domain points at it. The previous `akhsolutions.net` lived on a *different*
 Cloudflare account; a **new domain** is being added to the account `4e629676797087ded621769a58256d2a`
 (currently empty — "No domains found").
 

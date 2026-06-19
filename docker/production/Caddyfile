@@ -11,8 +11,12 @@
 #   tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin-key.pem
 # (generate it at SSL/TLS -> Origin Server -> Create Certificate, mount ./certs).
 
-akh.dav88.dev {
+akhsolutions.net, www.akhsolutions.net {
 	tls internal
+
+	# Canonical host is the apex; send www -> apex (keeps one URL for SEO/cookies).
+	@www host www.akhsolutions.net
+	redir @www https://akhsolutions.net{uri} permanent
 
 	encode zstd gzip
 

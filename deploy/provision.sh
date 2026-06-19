@@ -352,7 +352,7 @@ cat <<SUMMARY
        (If hardening was skipped above, re-run with DEPLOY_SSH_PUBKEY set.)
 
   MANUAL steps to finish the deployment (outside this script's scope):
-    A. DNS: point akh.dav88.dev at this VPS's IP in Cloudflare and set the
+    A. DNS: point akhsolutions.net at this VPS's IP in Cloudflare and set the
        record to PROXIED (orange cloud). Enable SSL/TLS mode "Full (strict)".
     B. TLS at the origin: create a Cloudflare Origin Certificate and place the
        cert+key where the host's reverse proxy reads them (the compose/proxy

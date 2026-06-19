@@ -43,7 +43,7 @@ class ThemeSeeder extends Seeder
             [
                 'site_name' => 'AKH Solutions',
                 'tagline' => 'Always ahead',
-                'primary_email' => 'info@akh.dav88.dev',
+                'primary_email' => 'info@akhsolutions.net',
                 // No fabricated contact channels: set real ones in Admin → Settings.
                 'phone' => null,
                 'whatsapp' => null,
