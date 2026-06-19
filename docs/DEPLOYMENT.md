@@ -88,6 +88,7 @@ ssh -i ~/.ssh/id_ed25519       deploy@<VPS_IP>     # personal key (also authoriz
 | `deploy/provision.sh` | one-time VPS hardening/bootstrap |
 | `deploy/.env.production.example` | production env template |
 | `deploy/backup-db.sh` | DB backup script (lives at `/opt/akh/backup-db.sh`) |
+| `deploy/cf-firewall.sh` | locks Docker-published 80/443 to Cloudflare IPs (DOCKER-USER chain); run by the `cf-firewall.service` systemd unit on boot |
 | `.github/workflows/ci.yml` | tests + lint + build on every push (PHP 8.4/8.5) |
 | `.github/workflows/deploy-vultr.yml` | build image + deploy to VPS |
 
