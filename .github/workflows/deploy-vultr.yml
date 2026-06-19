@@ -163,11 +163,10 @@ jobs:
             # Pull the new image first so the swap is fast (less downtime).
             docker compose -f docker-compose.prod.yml pull app
 
-            # OPTIONAL pre-migrate backup (uncomment once DB creds are available
-            # to the box). Protects against irreversible/destructive migrations.
-            # docker compose -f docker-compose.prod.yml exec -T mysql \
-            #   sh -c 'mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
-            #   > "backup-$(date +%F-%H%M%S).sql"
+            # Snapshot the DB BEFORE the (irreversible) migration. If this fails,
+            # the whole deploy aborts (set -e) - we never migrate without a
+            # recovery point. Dumps land in /opt/akh/backups (rotated 14 days).
+            bash backup-db.sh pre-deploy
 
             # Run migrations as a one-off container BEFORE swapping the app.
             # Uses the new image. --force is required outside local env.
