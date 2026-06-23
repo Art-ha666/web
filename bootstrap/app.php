@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CacheGuestPages;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ShareSiteData;
@@ -32,6 +33,24 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        // Edge-cacheability for anonymous marketing pages. Prepended so its
+        // response phase runs LAST (outermost) - after StartSession + CSRF have
+        // attached their Set-Cookie headers - so it can strip them and stamp a
+        // public s-maxage. Cloudflare then serves those pages from the edge in
+        // milliseconds and the origin stops rendering them under load.
+        $middleware->web(prepend: [
+            CacheGuestPages::class,
+        ]);
+
+        // The two public lead forms post from pages that are now served
+        // cookieless (no XSRF-TOKEN cookie for first-time visitors). They are
+        // already hardened with a honeypot + per-IP throttle + strict
+        // validation, so exempt them from CSRF rather than break submissions.
+        $middleware->validateCsrfTokens(except: [
+            'contact',
+            'newsletter',
         ]);
 
         $middleware->alias([

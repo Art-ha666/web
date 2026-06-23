@@ -47,4 +47,13 @@ return [
         'model' => env('GEMINI_MODEL', 'gemini-3.5-flash'),
     ],
 
+    // Cloudflare edge-cache purge. When both are set, any admin CMS write
+    // instantly purges the public edge cache so content changes are visible
+    // immediately (see App\Http\Middleware\PurgeEdgeCacheOnWrite). When unset
+    // (local/dev/tests) the purge is a no-op.
+    'cloudflare' => [
+        'token' => env('CLOUDFLARE_API_TOKEN'),
+        'zone_id' => env('CLOUDFLARE_ZONE_ID'),
+    ],
+
 ];

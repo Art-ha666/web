@@ -26,7 +26,9 @@ WORKDIR /var/www/html
 COPY --from=vendor /app /var/www/html
 
 COPY docker/production/php.ini /usr/local/etc/php/conf.d/zz-akh.ini
-COPY docker/production/php-fpm.conf /usr/local/etc/php-fpm.d/zz-akh.conf
+# Overwrite the base image's default [www] pool so our sizing is authoritative
+# (avoids a duplicate [www] from the shipped www.conf leaving stale directives).
+COPY docker/production/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
 COPY docker/production/nginx.conf /etc/nginx/nginx.conf
 COPY docker/production/supervisord.conf /etc/supervisord.conf
 COPY docker/production/entrypoint.sh /usr/local/bin/entrypoint
