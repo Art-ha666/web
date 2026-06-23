@@ -546,7 +546,7 @@ HTML;
 <p>This Cookie Policy explains what cookies this website sets and how you control them. When you first visit, a consent banner lets you accept or decline non-essential cookies - nothing optional runs until you choose.</p>
 <h2>Essential cookies (always on)</h2>
 <ul>
-<li><strong>laravel_session</strong> - keeps your session working (forms, security). Expires when the session ends.</li>
+<li><strong>akh-solutions-session</strong> - keeps your session working (forms, security). Expires when the session ends.</li>
 <li><strong>XSRF-TOKEN</strong> - protects forms against cross-site request forgery.</li>
 <li><strong>akh-cookie-consent</strong> - remembers the choice you made in the consent banner.</li>
 </ul>

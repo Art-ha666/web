@@ -6,7 +6,7 @@ import SettingsLayout from '@/layouts/settings/Layout.vue';
 import SiteLayout from '@/layouts/SiteLayout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'AKH Solutions';
 
 createInertiaApp({
     // Public pages set full branded titles; only suffix the brand when missing.
