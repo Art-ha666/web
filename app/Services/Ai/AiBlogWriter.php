@@ -46,6 +46,18 @@ class AiBlogWriter
         return $this->fromProviderKey(SiteSetting::current()->ai_provider ?: 'openai');
     }
 
+    /**
+     * Whether a real (non-template) AI provider is configured and usable.
+     *
+     * When false, on-demand generation would silently fall back to the offline
+     * template writer, so callers (the admin UI) should instead prompt the user
+     * to add an API key.
+     */
+    public function hasConfiguredProvider(?string $provider = null): bool
+    {
+        return ! ($this->generator($provider) instanceof TemplateGenerator);
+    }
+
     protected function fromProviderKey(string $provider): AiTextGenerator
     {
         $settings = SiteSetting::current();

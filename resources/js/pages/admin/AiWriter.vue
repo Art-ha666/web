@@ -16,6 +16,7 @@ interface Provider {
 }
 
 const props = defineProps<{
+    aiConfigured: boolean;
     settings: { ai_blog_enabled: boolean; ai_blog_frequency: string; ai_blog_per_run: number; ai_blog_topics: string; ai_blog_autopublish: boolean };
     keyStatus: { openai: boolean; gemini: boolean };
     modelOptions: { openai: string[]; gemini: string[] };
@@ -68,9 +69,15 @@ const input = 'h-10 w-full rounded-lg border border-border bg-background px-3 te
                 <h1 class="flex items-center gap-2 text-2xl font-semibold tracking-tight"><Bot class="size-6" /> AI Writer</h1>
                 <p class="text-sm text-muted-foreground">Auto-generate blog posts from live industry trends. Add the AIs you want to use, pick the active one, and control the schedule - all from here.</p>
             </div>
-            <button class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60" :disabled="generating" @click="generateNow">
+            <button class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60" :disabled="generating || !aiConfigured" :title="aiConfigured ? '' : 'Add an OpenAI or Gemini API key first'" @click="generateNow">
                 <Sparkles class="size-4" /> {{ generating ? 'Generating…' : 'Generate now' }}
             </button>
+        </div>
+
+        <!-- No AI configured: prompt the admin to add a key instead of failing silently. -->
+        <div v-if="!aiConfigured" class="flex items-start gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 dark:text-amber-400">
+            <Sparkles class="mt-0.5 size-4 shrink-0" />
+            <p>No AI is configured, so post generation is turned off. Add an <strong>OpenAI</strong> or <strong>Gemini</strong> API key under <strong>“Your AIs”</strong> below (or set one in the server environment) to start generating posts.</p>
         </div>
 
         <!-- AI providers manager -->

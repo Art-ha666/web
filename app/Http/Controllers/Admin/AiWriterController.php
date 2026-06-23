@@ -15,11 +15,12 @@ use Inertia\Response;
 
 class AiWriterController extends Controller
 {
-    public function index(): Response
+    public function index(AiBlogWriter $writer): Response
     {
         $settings = SiteSetting::current();
 
         return Inertia::render('admin/AiWriter', [
+            'aiConfigured' => $writer->hasConfiguredProvider(),
             'settings' => [
                 'ai_blog_enabled' => (bool) $settings->ai_blog_enabled,
                 'ai_blog_frequency' => $settings->ai_blog_frequency ?: 'twice_weekly',
@@ -110,6 +111,12 @@ class AiWriterController extends Controller
 
     public function generate(Request $request, AiBlogWriter $writer): RedirectResponse
     {
+        // No API key / usable provider: tell the admin to add one instead of
+        // silently producing offline template posts (or erroring out).
+        if (! $writer->hasConfiguredProvider()) {
+            return back()->with('error', 'No AI is configured. Add an OpenAI or Gemini API key under "Your AIs" above (or set one in the server environment), then try again.');
+        }
+
         $count = (int) SiteSetting::current()->ai_blog_per_run ?: 1;
 
         try {

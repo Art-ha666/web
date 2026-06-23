@@ -25,9 +25,25 @@ it('shows the AI writer with provider status', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('admin/AiWriter')
             ->has('keyStatus')
+            ->has('aiConfigured')
             ->has('aiProviders')
             ->has('settings')
         );
+});
+
+it('flags aiConfigured false with no key and true once a key is set', function () {
+    config(['services.openai.key' => null, 'services.gemini.key' => null]);
+    AiProvider::query()->delete();
+
+    $admin = User::factory()->create();
+
+    $this->actingAs($admin)->get('/admin/ai-writer')
+        ->assertInertia(fn (Assert $page) => $page->where('aiConfigured', false));
+
+    config(['services.openai.key' => 'sk-test']);
+
+    $this->actingAs($admin)->get('/admin/ai-writer')
+        ->assertInertia(fn (Assert $page) => $page->where('aiConfigured', true));
 });
 
 it('saves AI writer settings', function () {
@@ -47,17 +63,17 @@ it('saves AI writer settings', function () {
     expect($settings->ai_blog_per_run)->toBe(2);
 });
 
-it('generates a draft article on demand (template fallback, no API key)', function () {
+it('refuses on-demand generation and prompts for a key when no AI is configured', function () {
     config(['services.openai.key' => null, 'services.gemini.key' => null]);
+    AiProvider::query()->delete();
 
     $this->actingAs(User::factory()->create())
         ->post('/admin/ai-writer/generate')
-        ->assertRedirect();
+        ->assertRedirect()
+        ->assertSessionHas('error');
 
-    $article = Article::query()->whereNotNull('generated_by')->first();
-    expect($article)->not->toBeNull();
-    expect($article->status)->toBe('draft');
-    expect($article->generated_by)->toBe('ai:template');
+    // No silent template post is created - the admin is told to add a key.
+    expect(Article::query()->whereNotNull('generated_by')->count())->toBe(0);
 });
 
 it('writes via the OpenAI provider when a key is configured', function () {
