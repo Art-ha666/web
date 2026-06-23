@@ -177,11 +177,6 @@ jobs:
             # The entrypoint re-caches config/routes/views on boot.
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
-            # Purge the Cloudflare edge cache so cached HTML stops referencing
-            # the previous build's (now-404) hashed Vite assets. Uses the CF
-            # token from the box .env; a no-op if it is not configured.
-            docker compose -f docker-compose.prod.yml exec -T app php artisan cache:purge-edge || true
-
             # Trim old images to keep the small disk clean.
             docker image prune -f
         env:

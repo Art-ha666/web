@@ -20,7 +20,6 @@ use App\Http\Controllers\Admin\StatController;
 use App\Http\Controllers\Admin\TeamMemberController;
 use App\Http\Controllers\Admin\TestimonialController;
 use App\Http\Middleware\NormalizeDashes;
-use App\Http\Middleware\PurgeEdgeCacheOnWrite;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,7 +27,7 @@ use Illuminate\Support\Facades\Route;
 | designs, page builder, content entities, leads inbox, and settings.
 | NormalizeDashes rewrites em/en dashes in submitted copy to plain "-".
 */
-Route::middleware(['auth', 'verified', NormalizeDashes::class, PurgeEdgeCacheOnWrite::class])
+Route::middleware(['auth', 'verified', NormalizeDashes::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function (): void {
